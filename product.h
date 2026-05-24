@@ -1,7 +1,3 @@
-//
-// Created by Tom on 29.12.2024.
-//
-
 #ifndef PRODUCT_H
 #define PRODUCT_H
 

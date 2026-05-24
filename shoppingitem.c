@@ -1,6 +1,4 @@
-//
-// Created by Tom on 10.01.2025.
-//
+
 #include <string.h>
 #include "shoppingitem.h"
 

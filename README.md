@@ -6,7 +6,13 @@
 
 This is a comprehensive, Command-Line Interface (CLI) Supermarket Management System written entirely in C. It provides an interactive menu-driven environment to manage supermarket operations, track inventory, handle customer registrations, and simulate real-time shopping sessions.
 
-**Note:** This project was developed, compiled, and tested specifically on **Windows 10**.
+## 🛠️ Development Environment
+
+This project was built, compiled, and tested using the following environment and tools:
+* **Operating System:** Windows 10
+* **IDE:** CLion
+* **Compiler:** GCC 14.2 (via MinGW)
+* **C Standard:** C17
 
 ## ✨ Features
 
@@ -35,5 +41,5 @@ To compile and run this project, you will need a C compiler such as `GCC` (MinGW
 
 1. **Clone the repository:**
    ```bash
-   git clone [https://github.com/GurevichTom/DigitalStore.git](https://github.com/GurevichTom/DigitalStore.git)
-   cd DigitalStore
+   git clone [https://github.com/AsayagOmer/SupermarketManagementSystem.git](https://github.com/AsayagOmer/SupermarketManagementSystem.git)
+   cd SupermarketManagementSystem

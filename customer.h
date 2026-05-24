@@ -1,6 +1,3 @@
-//
-// Created by Tom on 29.12.2024.
-//
 
 #ifndef CUSTOMER_H
 #define CUSTOMER_H

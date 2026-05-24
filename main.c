@@ -62,9 +62,6 @@ int main() {
         choice = displayMainMenu();
     } while (runFunction(&superMarket, choice));
 
-
-    // Customer c;
-    // initCustomer(&c);
-    // printCustomer(&c);
+    return 0;
 
 }

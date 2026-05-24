@@ -1,6 +1,3 @@
-//
-// Created by Tom on 10.01.2025.
-//
 
 #ifndef SHOPPINGITEM_H
 #define SHOPPINGITEM_H
