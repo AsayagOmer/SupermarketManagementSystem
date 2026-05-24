@@ -102,9 +102,3 @@ While this project marks a significant milestone in my C learning journey, there
 ## 📄 License
 
 Distributed under the Unlicensed license. See `Unlicense license` for more information.
-
-## 📬 Contact
-
-Omer Asayag - [GitHub Profile](https://www.google.com/search?q=https://github.com/AsayagOmer)
-
-Project Link: [https://github.com/AsayagOmer/SupermarketManagementSystem](https://www.google.com/search?q=https://github.com/AsayagOmer/SupermarketManagementSystem)
