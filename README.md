@@ -1,7 +1,8 @@
 
 # 🛒 Supermarket Management System
 
-> **A Personal Note:** <br>I built this project as a milestone in my programming journey.
+> **A Personal Note:** 
+<br>I built this project as a milestone in my programming journey.
 <br>Prior to October 2024, I had absolutely zero knowledge of the C programming language.
 <br>This repository represents my rapid progress from writing my first `printf` to implementing complex data structures and simulating object-oriented concepts in a procedural language.
 <br>

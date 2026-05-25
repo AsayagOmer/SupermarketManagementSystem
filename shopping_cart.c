@@ -1,6 +1,3 @@
-//
-// Created by Tom on 29.12.2024.
-//
 
 #include <stdlib.h>
 #include "shopping_cart.h"

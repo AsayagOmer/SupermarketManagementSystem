@@ -1,6 +1,3 @@
-//
-// Created by Tom on 10.01.2025.
-//
 
 #ifndef SUPERMARKET_H
 #define SUPERMARKET_H

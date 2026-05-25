@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.30)
-project(DigitalStore C)
+project(Supermarket-System C)
 
 set(CMAKE_C_STANDARD 11)
 
