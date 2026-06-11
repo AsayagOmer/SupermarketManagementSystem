@@ -13,6 +13,7 @@ int initCustomer(Customer* customer) {
     initCustomerName(customer);
     if (!customer->name || !getCustomerIdFromUser(customer))
         return 0;
+    return 1;
 }
 
 int getCustomerIdFromUser(Customer* customer) {
@@ -93,6 +94,8 @@ char* getCustomerNameFromUser(const char* prompt) {
         return NULL;
     }
 
+    back[0] = '\0';  // Initialize buffer before strcat
+
     const char* words = strtok(name, " ");
 
     while (words != NULL) {
@@ -162,9 +165,11 @@ void printCustomerShoppingCart(const Customer* customer) {
         return;
     }
 
-    for (int i = 0; i < customer->shopping_cart.productCount; i++) {
-        const ShoppingItem* item = customer->shopping_cart.shopping_items[i];
-        printf("Item %s count %d price per item %.2f\n", item->barcode, item->amount, item->price);
+    // Traverse linked list instead of array
+    const ShoppingItem* current = customer->shopping_cart.head;
+    while (current) {
+        printf("Item %s count %d price per item %.2f\n", current->barcode, current->amount, current->price);
+        current = current->next;
     }
 
     const float total = computeShoppingCartPrice(&customer->shopping_cart);

@@ -1,6 +1,7 @@
 #include <stdio.h>
 
 #include "supermarket.h"
+#include "analytics.h"
 
 
 int displayMainMenu() {
@@ -11,7 +12,9 @@ int displayMainMenu() {
     printf("3 - Customer Shopping\n");
     printf("4 - Print Shopping Cart\n");
     printf("5 - Customer Shopping Cart Management\n");
-    printf("6 - Print product by type\n");
+    printf("6 - Product Filter & Sort\n");
+    printf("7 - Data Extraction & Analytics\n");
+    printf("8 - Save Data\n");
     printf("-1 - Quit\n");
 
     int userChoice;
@@ -38,7 +41,9 @@ int runFunction(SuperMarket* superMarket, const int choice) {
                 printf("Error in shopping cart management\n");
             }
             break;
-        case 6: printProductsByType(superMarket); break;
+        case 6: productFilterMenu(superMarket); break;
+        case 7: analyticsMenu(); break;
+        case 8: saveAllData(superMarket); break;
         case -1:
             printf("Bye bye\n");
             finalizeSuperMarket(superMarket);

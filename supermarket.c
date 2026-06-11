@@ -8,6 +8,7 @@
 #include <ctype.h>
 
 #include "utils.h"
+#include "fileio.h"
 
 
 
@@ -30,6 +31,21 @@ int initSuperMarket(SuperMarket* super_market) {
 
     strcpy(super_market->name, name);
     free(name);
+
+    // Load persisted data from files
+    ensureDataDirectory();
+    if (!loadProducts(PRODUCTS_FILE, &super_market->products, &super_market->productCount)) {
+        printf("Warning: Could not load products from file\n");
+    } else if (super_market->productCount > 0) {
+        printf("Loaded %d products from file\n", super_market->productCount);
+    }
+
+    if (!loadCustomers(CUSTOMERS_FILE, &super_market->customers, &super_market->customerAmount)) {
+        printf("Warning: Could not load customers from file\n");
+    } else if (super_market->customerAmount > 0) {
+        printf("Loaded %d customers from file\n", super_market->customerAmount);
+    }
+
     return 1;
 }
 
@@ -61,6 +77,7 @@ int addNewProductToSuperMarket(SuperMarket * super_market) {
     const int productInitialized = init_product(newProduct);
     if (!productInitialized) {
         printf("Adding product failed!\n");
+        free(newProduct);
         return 0;
     }
 
@@ -70,6 +87,7 @@ int addNewProductToSuperMarket(SuperMarket * super_market) {
     if (!super_market->products) {
         printf("Memory allocation failed!\n");
         super_market->productCount = 0;
+        free(newProduct);
         return 0;
     }
 
@@ -153,6 +171,8 @@ int addCustomerToSuperMarket(SuperMarket* superMarket) {
                             customerEqualsById);
     if (indexId != -1) {
         printf("ID %s is not unique\n", newCustomer->id);
+        freeCustomer(newCustomer);
+        free(newCustomer);
         return addCustomerToSuperMarket(superMarket);
     }
 
@@ -161,6 +181,8 @@ int addCustomerToSuperMarket(SuperMarket* superMarket) {
     if (indexName != -1) {
         printf("This customer already in market\n");
         printf("Error adding customer\n");
+        freeCustomer(newCustomer);
+        free(newCustomer);
         return 0;
     }
 
@@ -168,11 +190,13 @@ int addCustomerToSuperMarket(SuperMarket* superMarket) {
     superMarket->customers = (Customer*) safeRealloc(superMarket->customers, new_size);
     if (!superMarket->customers) {
         printf("Error allocating memory\n");
+        freeCustomer(newCustomer);
         free(newCustomer);
         superMarket->customerAmount = 0;
         return 0;
     }
     superMarket->customers[superMarket->customerAmount - 1] = *newCustomer;
+    free(newCustomer);
     return 1;
 }
 
@@ -195,6 +219,7 @@ int selectCustomer(const SuperMarket* superMarket) {
     strcpy(toSearch.id, toSearch.name);
 
     const int foundIndex = arraySearch(superMarket->customers, superMarket->customerAmount, sizeof(Customer), &toSearch, customerEquals);
+    free(toSearch.name);
     if (foundIndex == -1) {
         printf("this customer not listed\n");
         return -1;
@@ -224,6 +249,10 @@ int shopping(const SuperMarket* superMarket) {
     displayAllProducts(superMarket);
     while (confirmShopping()) {
         const int productIndex = searchProductByBarcode(superMarket);
+        if (productIndex == -1) {
+            printf("Product not found, try again\n");
+            continue;
+        }
         Product* selectedProduct = superMarket->products[productIndex];
 
         int amount;
@@ -233,8 +262,10 @@ int shopping(const SuperMarket* superMarket) {
             while (getchar()!='\n');
         } while (amount <= 0 || amount > selectedProduct->amount);
         selectedProduct->amount -= amount;
-        const ShoppingItem* item = initShoppingItem(selectedProduct, amount);
-        addItemToShoppingCart(&superMarket->customers[index].shopping_cart, item);
+        ShoppingItem* item = initShoppingItem(selectedProduct, amount);
+        if (item) {
+            addItemToShoppingCart(&superMarket->customers[index].shopping_cart, item);
+        }
     }
     return 1;
 }
@@ -252,24 +283,22 @@ void returnProductsToStore(const SuperMarket* superMarket, Customer* customer) {
         return;
     }
 
-    // For each item in the cart, return it to store
-    for (int i = 0; i < customer->shopping_cart.productCount; i++) {
-        const ShoppingItem* item = customer->shopping_cart.shopping_items[i];
-        if (!item) continue;
-
+    // Traverse linked list to return each item to store
+    ShoppingItem* current = customer->shopping_cart.head;
+    while (current) {
         int productIndex = arraySearch(
             superMarket->products,
             superMarket->productCount,
             sizeof(Product*),
-            item->barcode,       /* 'val' */
-            productBarcodeEquals /* comparator */
+            current->barcode,
+            productBarcodeEquals
         );
         if (productIndex == -1) {
-            // Ideally shouldn't happen if guaranteed to exist
-            printf("[Warning] Product not found for barcode %s\n", item->barcode);
-            continue;
+            printf("[Warning] Product not found for barcode %s\n", current->barcode);
+        } else {
+            superMarket->products[productIndex]->amount += current->amount;
         }
-        superMarket->products[productIndex]->amount += item->amount;
+        current = current->next;
     }
 
     // Now that we've returned everything, just free the cart
@@ -281,8 +310,14 @@ void returnProductsToStore(const SuperMarket* superMarket, Customer* customer) {
 void processPayment(Customer* customer) {
     printf("---------- Cart info and bill for %s ----------\n", customer->name);
     printCustomerShoppingCart(customer);
+
+    // Save purchase record before freeing the cart
+    const float total = computeShoppingCartPrice(&customer->shopping_cart);
+    savePurchaseRecord(PURCHASE_HISTORY_FILE, customer->id, customer->name,
+                       &customer->shopping_cart, total);
+
     freeShoppingCart(&customer->shopping_cart);
-    printf("!!! --- Payment was recived!!!! ---\n");
+    printf("!!! --- Payment was received!!!! ---\n");
 }
 
 int shoppingCartManagement(const SuperMarket* superMarket) {
@@ -329,9 +364,249 @@ void printProductsByType(const SuperMarket* superMarket) {
     }
 
     if (!foundAny) {
-        printf("There are no product of type %s found in market %s", typeTitle[type], superMarket->name);
+        printf("There are no product of type %s found in market %s\n", typeTitle[type], superMarket->name);
     }
 }
+
+// ===================== Enhanced Product Filtering =====================
+
+void filterProductsByName(const SuperMarket* superMarket) {
+    char* searchTerm = getUserInputString("Enter product name to search for (partial match)");
+    if (!searchTerm) return;
+
+    // Convert search term to lowercase for case-insensitive matching
+    for (int i = 0; searchTerm[i]; i++) {
+        searchTerm[i] = tolower(searchTerm[i]);
+    }
+
+    printf("\n--- Products matching \"%s\" ---\n", searchTerm);
+    printf("Name                 Barcode    Type                 Price      Count In Stock       Expiry Date\n");
+    printf("-------------------------------------------------------------------------------------------------\n");
+
+    int foundAny = 0;
+    for (int i = 0; i < superMarket->productCount; i++) {
+        // Make a lowercase copy of the product name for comparison
+        char nameLower[NAME_LEN];
+        strncpy(nameLower, superMarket->products[i]->name, NAME_LEN - 1);
+        nameLower[NAME_LEN - 1] = '\0';
+        for (int j = 0; nameLower[j]; j++) {
+            nameLower[j] = tolower(nameLower[j]);
+        }
+
+        if (strstr(nameLower, searchTerm)) {
+            print_product(&superMarket->products[i]);
+            foundAny = 1;
+        }
+    }
+
+    if (!foundAny) {
+        printf("No products found matching \"%s\"\n", searchTerm);
+    }
+    free(searchTerm);
+}
+
+void filterProductsByPriceRange(const SuperMarket* superMarket) {
+    float minPrice, maxPrice;
+
+    printf("Enter minimum price: ");
+    scanf("%f", &minPrice);
+    printf("Enter maximum price: ");
+    scanf("%f", &maxPrice);
+    while (getchar() != '\n');
+
+    if (minPrice > maxPrice) {
+        float temp = minPrice;
+        minPrice = maxPrice;
+        maxPrice = temp;
+    }
+
+    printf("\n--- Products priced between %.2f and %.2f ---\n", minPrice, maxPrice);
+    printf("Name                 Barcode    Type                 Price      Count In Stock       Expiry Date\n");
+    printf("-------------------------------------------------------------------------------------------------\n");
+
+    int foundAny = 0;
+    for (int i = 0; i < superMarket->productCount; i++) {
+        const Product* p = superMarket->products[i];
+        if (p->price >= minPrice && p->price <= maxPrice) {
+            print_product(&superMarket->products[i]);
+            foundAny = 1;
+        }
+    }
+
+    if (!foundAny) {
+        printf("No products found in that price range\n");
+    }
+}
+
+void filterProductsByExpiry(const SuperMarket* superMarket) {
+    Date deadline;
+    printf("Show products expiring before:\n");
+    init_date(&deadline);
+
+    printf("\n--- Products expiring before %02d/%02d/%04d ---\n",
+           deadline.day, deadline.month, deadline.year);
+    printf("Name                 Barcode    Type                 Price      Count In Stock       Expiry Date\n");
+    printf("-------------------------------------------------------------------------------------------------\n");
+
+    int foundAny = 0;
+    for (int i = 0; i < superMarket->productCount; i++) {
+        const Product* p = superMarket->products[i];
+        const Date* ed = &p->expiration_date;
+
+        // Check if product expires before the deadline
+        int expiresBefore = 0;
+        if (ed->year < deadline.year) {
+            expiresBefore = 1;
+        } else if (ed->year == deadline.year && ed->month < deadline.month) {
+            expiresBefore = 1;
+        } else if (ed->year == deadline.year && ed->month == deadline.month && ed->day < deadline.day) {
+            expiresBefore = 1;
+        }
+
+        if (expiresBefore) {
+            print_product(&superMarket->products[i]);
+            foundAny = 1;
+        }
+    }
+
+    if (!foundAny) {
+        printf("No products found expiring before that date\n");
+    }
+}
+
+void sortProductsByPrice(const SuperMarket* superMarket) {
+    if (superMarket->productCount <= 1) {
+        displayAllProducts(superMarket);
+        return;
+    }
+
+    printf("Sort by price: 1 for ascending, 2 for descending: ");
+    int order;
+    scanf("%d", &order);
+    while (getchar() != '\n');
+
+    // Create a temporary copy of the pointers array for sorting
+    Product** sorted = (Product**) malloc(superMarket->productCount * sizeof(Product*));
+    if (!sorted) {
+        printf("Memory allocation failed\n");
+        return;
+    }
+    memcpy(sorted, superMarket->products, superMarket->productCount * sizeof(Product*));
+
+    // Selection sort
+    for (int i = 0; i < superMarket->productCount - 1; i++) {
+        int targetIdx = i;
+        for (int j = i + 1; j < superMarket->productCount; j++) {
+            if (order == 1) {
+                if (sorted[j]->price < sorted[targetIdx]->price)
+                    targetIdx = j;
+            } else {
+                if (sorted[j]->price > sorted[targetIdx]->price)
+                    targetIdx = j;
+            }
+        }
+        if (targetIdx != i) {
+            Product* temp = sorted[i];
+            sorted[i] = sorted[targetIdx];
+            sorted[targetIdx] = temp;
+        }
+    }
+
+    printf("\n--- Products sorted by price (%s) ---\n", order == 1 ? "ascending" : "descending");
+    printf("Name                 Barcode    Type                 Price      Count In Stock       Expiry Date\n");
+    printf("-------------------------------------------------------------------------------------------------\n");
+    printArray(sorted, superMarket->productCount, sizeof(Product*), print_product);
+
+    free(sorted);
+}
+
+void sortProductsByName(const SuperMarket* superMarket) {
+    if (superMarket->productCount <= 1) {
+        displayAllProducts(superMarket);
+        return;
+    }
+
+    // Create a temporary copy of the pointers array for sorting
+    Product** sorted = (Product**) malloc(superMarket->productCount * sizeof(Product*));
+    if (!sorted) {
+        printf("Memory allocation failed\n");
+        return;
+    }
+    memcpy(sorted, superMarket->products, superMarket->productCount * sizeof(Product*));
+
+    // Selection sort alphabetically
+    for (int i = 0; i < superMarket->productCount - 1; i++) {
+        int minIdx = i;
+        for (int j = i + 1; j < superMarket->productCount; j++) {
+            if (strcmp(sorted[j]->name, sorted[minIdx]->name) < 0) {
+                minIdx = j;
+            }
+        }
+        if (minIdx != i) {
+            Product* temp = sorted[i];
+            sorted[i] = sorted[minIdx];
+            sorted[minIdx] = temp;
+        }
+    }
+
+    printf("\n--- Products sorted alphabetically ---\n");
+    printf("Name                 Barcode    Type                 Price      Count In Stock       Expiry Date\n");
+    printf("-------------------------------------------------------------------------------------------------\n");
+    printArray(sorted, superMarket->productCount, sizeof(Product*), print_product);
+
+    free(sorted);
+}
+
+void productFilterMenu(const SuperMarket* superMarket) {
+    if (superMarket->productCount == 0) {
+        printf("No products in store to filter\n");
+        return;
+    }
+
+    int choice;
+    do {
+        printf("\n--- Product Filter & Sort ---\n");
+        printf("1 - Filter by type\n");
+        printf("2 - Filter by name (search)\n");
+        printf("3 - Filter by price range\n");
+        printf("4 - Filter by expiry date\n");
+        printf("5 - Sort by price\n");
+        printf("6 - Sort by name\n");
+        printf("0 - Back to main menu\n");
+        scanf("%d", &choice);
+        while (getchar() != '\n');
+
+        switch (choice) {
+            case 1: printProductsByType(superMarket); break;
+            case 2: filterProductsByName(superMarket); break;
+            case 3: filterProductsByPriceRange(superMarket); break;
+            case 4: filterProductsByExpiry(superMarket); break;
+            case 5: sortProductsByPrice(superMarket); break;
+            case 6: sortProductsByName(superMarket); break;
+            case 0: break;
+            default: printf("Invalid option\n"); break;
+        }
+    } while (choice != 0);
+}
+
+// ===================== Data Persistence =====================
+
+void saveAllData(const SuperMarket* superMarket) {
+    ensureDataDirectory();
+    if (saveProducts(PRODUCTS_FILE, superMarket->products, superMarket->productCount)) {
+        printf("Products saved successfully (%d products)\n", superMarket->productCount);
+    } else {
+        printf("Error saving products\n");
+    }
+
+    if (saveCustomers(CUSTOMERS_FILE, superMarket->customers, superMarket->customerAmount)) {
+        printf("Customers saved successfully (%d customers)\n", superMarket->customerAmount);
+    } else {
+        printf("Error saving customers\n");
+    }
+}
+
+// ===================== Finalization =====================
 
 void finalizeSuperMarket(SuperMarket* superMarket) {
     for (int i = 0; i < superMarket->customerAmount; i++) {
@@ -340,6 +615,10 @@ void finalizeSuperMarket(SuperMarket* superMarket) {
             processPayment(customer);
         }
     }
+
+    // Save data before freeing
+    saveAllData(superMarket);
+
     freeSuperMarket(superMarket);
 }
 
@@ -351,7 +630,7 @@ void freeSuperMarket(SuperMarket* superMarket) {
     superMarket->name = NULL;
 
     // 2) Free the array of customers
-    //    (But first free each customer’s internals)
+    //    (But first free each customer's internals)
     for (int i = 0; i < superMarket->customerAmount; i++) {
         freeCustomer(&superMarket->customers[i]);
     }

@@ -5,26 +5,38 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "utils.h"
-
 ShoppingCart* initShoppingCart() {
     ShoppingCart* shopping_cart = (ShoppingCart*) malloc(sizeof(ShoppingCart));
     if (!shopping_cart) {
         printf("Memory allocation failed\n");
         return NULL;
     }
-    shopping_cart->shopping_items = NULL;
+    shopping_cart->head = NULL;
     shopping_cart->productCount = 0;
     return shopping_cart;
 }
 
 float computeShoppingCartPrice(const ShoppingCart* shopping_cart) {
     float price = 0.0f;
-    for (int i = 0; i < shopping_cart->productCount; i++) {
-        const ShoppingItem* item = shopping_cart->shopping_items[i];
-        price += item->price * item->amount;
+    const ShoppingItem* current = shopping_cart->head;
+    while (current) {
+        price += current->price * current->amount;
+        current = current->next;
     }
     return price;
+}
+
+ShoppingItem* findItemInCart(const ShoppingCart* cart, const char* barcode) {
+    if (!cart || !barcode) return NULL;
+
+    ShoppingItem* current = cart->head;
+    while (current) {
+        if (strcmp(current->barcode, barcode) == 0) {
+            return current;
+        }
+        current = current->next;
+    }
+    return NULL;
 }
 
 int addItemToShoppingCart(ShoppingCart* shopping_cart, ShoppingItem* item) {
@@ -32,51 +44,65 @@ int addItemToShoppingCart(ShoppingCart* shopping_cart, ShoppingItem* item) {
         return 0;
     }
 
-    // Search for an item that has the same barcode
-    int index = arraySearch(
-        shopping_cart->shopping_items,
-        shopping_cart->productCount,
-        sizeof(ShoppingItem*),
-        &item,
-        shoppingItemEquals
-    );
+    // Search for an existing item with the same barcode
+    ShoppingItem* existing = findItemInCart(shopping_cart, item->barcode);
 
-    // If the item doesn't exist in the cart yet, add a new pointer
-    if (index == -1) {
-        shopping_cart->productCount++;
-        size_t new_size = sizeof(ShoppingItem*) * shopping_cart->productCount;
-        shopping_cart->shopping_items =
-            (ShoppingItem**) safeRealloc(shopping_cart->shopping_items, new_size);
-
-        if (!shopping_cart->shopping_items) {
-            printf("Memory allocation failed!\n");
-            shopping_cart->productCount = 0; // or revert to old count if you prefer
-            return 0;
-        }
-
-        // Insert at the last valid index: productCount - 1
-        shopping_cart->shopping_items[shopping_cart->productCount - 1] = item;
+    if (existing) {
+        // If the item already exists, just increment its amount
+        existing->amount += item->amount;
+        // Free the new item since we merged it
+        free(item);
         return 1;
     }
 
-    // If the item already exists, just increment its amount
-    shopping_cart->shopping_items[index]->amount += item->amount;
+    // Insert new item at the head of the linked list
+    item->next = shopping_cart->head;
+    shopping_cart->head = item;
+    shopping_cart->productCount++;
     return 1;
 }
 
-void freeShoppingCart(ShoppingCart* cart) {
-    if (!cart || !cart->shopping_items)
-        return;
-
-    // Free each ShoppingItem pointer
-    for (int i = 0; i < cart->productCount; i++) {
-        free((void*) cart->shopping_items[i]);
+int removeItemFromCart(ShoppingCart* cart, const char* barcode) {
+    if (!cart || !barcode || !cart->head) {
+        return 0;
     }
 
-    // Free the array of pointers
-    free(cart->shopping_items);
+    ShoppingItem* current = cart->head;
+    ShoppingItem* previous = NULL;
 
-    // Null and reset
-    cart->shopping_items = NULL;
+    while (current) {
+        if (strcmp(current->barcode, barcode) == 0) {
+            // Unlink the node
+            if (previous) {
+                previous->next = current->next;
+            } else {
+                cart->head = current->next;
+            }
+            free(current);
+            cart->productCount--;
+            return 1;
+        }
+        previous = current;
+        current = current->next;
+    }
+
+    printf("Item with barcode %s not found in cart\n", barcode);
+    return 0;
+}
+
+void freeShoppingCart(ShoppingCart* cart) {
+    if (!cart)
+        return;
+
+    // Traverse the linked list and free each node
+    ShoppingItem* current = cart->head;
+    while (current) {
+        ShoppingItem* next = current->next;
+        free(current);
+        current = next;
+    }
+
+    // Reset the cart
+    cart->head = NULL;
     cart->productCount = 0;
 }

@@ -2,15 +2,16 @@
 #define PRODUCT_H
 
 #include "date.h"
+#include "vtable.h"
 
 #define NAME_LEN 20
-#define BARCODE_LEN 7
+#define BARCODE_LEN 8
 
 typedef enum {FruitVegetable, Fridge, Frozen, Shelf, NofTypes} ProductType;
 extern const char* typeTitle[NofTypes];
 extern const char* shortTypeTitle[NofTypes];
 
-typedef struct {
+typedef struct Product {
 
   char name[NAME_LEN];
   char barcode[BARCODE_LEN];
@@ -18,6 +19,7 @@ typedef struct {
   float price;
   int amount;
   Date expiration_date;
+  const ProductVTable* vtable;
 
 } Product;
 

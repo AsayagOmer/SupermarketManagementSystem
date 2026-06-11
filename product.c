@@ -22,17 +22,21 @@ int init_product(Product* product) {
     product->price = getNonNegativeFloatFromUser("Enter product price");
     product->amount = (int) getNonNegativeFloatFromUser("Enter product number of items");
 
+    // Assign V-Table based on product type
+    product->vtable = getVTableForType(product->type);
+
     return 1;
 }
 
 void generateBarcode(Product* product) {
     strcpy(product->barcode, shortTypeTitle[product->type]);
 
-    for (int i = (int) strlen(product->barcode); i < BARCODE_LEN; i++) {
+    for (int i = (int) strlen(product->barcode); i < BARCODE_LEN - 1; i++) {
         const int randint = rand() % 10;
         const char digit = '0' + randint;
         product->barcode[i] = digit;
     }
+    product->barcode[BARCODE_LEN - 1] = '\0';
 }
 
 ProductType getTypeFromUser() {
@@ -62,8 +66,14 @@ int productBarcodeEquals(const void* p, const void* val) {
 
 void print_product(const void* p){
     const Product *product = *(Product**) p;
-    printf("%-21s%-11s%-22s%.2f            %d              ", product->name, product->barcode, typeTitle[product->type],
-           product->price, product->amount);
-    print_date(&product->expiration_date);
-    printf("\n");
+
+    // Use V-Table dispatch if available, otherwise fallback
+    if (product->vtable && product->vtable->print) {
+        product->vtable->print(product);
+    } else {
+        printf("%-21s%-11s%-22s%.2f            %d              ", product->name, product->barcode, typeTitle[product->type],
+               product->price, product->amount);
+        print_date(&product->expiration_date);
+        printf("\n");
+    }
 }

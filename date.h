@@ -14,4 +14,8 @@ typedef struct {
 } Date;
 
 int init_date(Date *date);
+int get_date_from_user(Date *date);
+int is_valid_date(const Date *date);
+void print_date(const Date *date);
+
 #endif //DATE_H

@@ -11,7 +11,7 @@
 ## 📖 About The Project
 
 This is a comprehensive, Command-Line Interface (CLI) Supermarket Management System written entirely in C. 
-<br>It provides an interactive menu-driven environment to manage supermarket operations, track inventory, handle customer registrations, and simulate real-time shopping sessions.
+<br>It provides an interactive menu-driven environment to manage supermarket operations, track inventory, handle customer registrations, simulate real-time shopping sessions, and analyze purchasing data.
 
 ## 🛠️ Development Environment
 
@@ -25,18 +25,22 @@ This project was built, compiled, and tested using the following environment and
 
 Based on the core menu system, the application supports:
 * **Supermarket Overview:** Display the current state of the supermarket.
-* **Inventory Management:** Add new products and print existing products filtered by their specific types.
-* **Customer Operations:** Register new customers into the system.
+* **Inventory Management:** Add new products and restock existing items.
+* **Customer Operations:** Register new customers with unique ID validation.
 * **Interactive Shopping:** Allow customers to start shopping sessions, add items to their carts, and checkout.
-* **Cart Management:** View and dynamically modify the contents of a shopping cart.
+* **Cart Management:** View and dynamically modify shopping cart contents using a Linked List.
+* **Product Filtering & Sorting:** Filter products by type, name (substring search), price range, and expiry date. Sort by price or name.
+* **Data Persistence:** Automatically save and load products, customers, and purchase history to/from text files.
+* **Data Extraction & Analytics:** View customer purchase history, top customers by spending, top products by units sold, and revenue reports.
 
 ## 🧠 Technical Highlights & Skills Applied
 
-This project heavily utilizes advanced C concepts. Here is what I learned and implemented:
+This project heavily utilizes advanced C concepts:
 
-* **V-Tables (Virtual Method Tables):** Implemented to simulate Object-Oriented Programming (OOP) polymorphism in C. This allows the system to handle different structural types (e.g., various product categories) dynamically at runtime.
-* **Linked Lists:** Used to create dynamic data structures. Instead of relying on fixed-size arrays, the system can gracefully handle a growing number of customers and cart items, managing memory efficiently.
-* **File Handling:** Implemented persistent storage. The application can read from and write to external files, ensuring that data (like inventory and customer lists) is saved between sessions.
+* **V-Tables (Virtual Method Tables):** Implemented to simulate Object-Oriented Programming (OOP) polymorphism in C. Each product type (Fruit & Vegetable, Fridge, Frozen, Shelf) has its own V-Table with specialized print, discount calculation, and expiry validation functions.
+* **Linked Lists:** Shopping carts use a singly linked list data structure. Items are dynamically added, searched, and removed via pointer-based traversal.
+* **File Handling:** Full persistent storage implementation. Products, customers, and purchase history are saved to text files in the `data/` directory and automatically loaded on startup.
+* **Generic Programming:** The `utils.c` module provides generic `arraySearch` and `printArray` functions using `void*` pointers and function pointer callbacks — a form of runtime polymorphism.
 * **Manual Memory Management:** Extensive use of pointers, `malloc`, `calloc`, and `free` to allocate memory dynamically while ensuring no memory leaks occur upon program termination (`finalizeSuperMarket`).
 
 ## 🚀 Getting Started
@@ -48,20 +52,25 @@ To compile and run this project, you will need a C compiler such as `GCC` (MinGW
 
 1. **Clone the repository:**
 ```bash
-   git clone [https://github.com/AsayagOmer/SupermarketManagementSystem.git](https://github.com/AsayagOmer/SupermarketManagementSystem.git)
+   git clone https://github.com/AsayagOmer/SupermarketManagementSystem.git
    cd SupermarketManagementSystem
 
 ```
 
-2. **Compile the source code:**
-Using GCC, compile the C files. *(Note: Adjust the file paths below if your source files are organized in specific directories).*
-
+2. **Compile the source code (using CMake):**
 ```bash
-   gcc -std=c17 -o supermarket main.c
+   cmake -B build -DCMAKE_C_STANDARD=17
+   cmake --build build
 
 ```
 
-3. **Run the executable:**
+3. **Or compile directly with GCC:**
+```bash
+   gcc -std=c17 -o supermarket main.c date.c utils.c product.c customer.c shopping_cart.c shoppingitem.c supermarket.c vtable.c fileio.c analytics.c
+
+```
+
+4. **Run the executable:**
 
 ```bash
    # On Windows
@@ -74,31 +83,37 @@ Using GCC, compile the C files. *(Note: Adjust the file paths below if your sour
 
 ## 🎮 Usage
 
-Upon launching the application, you will be greeted with an interactive main menu. Use your keyboard to input the number corresponding to your desired action and press `Enter`:
+Upon launching the application, you will be greeted with an interactive main menu:
 
-1. **View Supermarket Status:** Check current inventory levels and view all registered customers.
-2. **Manage Inventory:** Enter details for new items (name, category, price) to stock the shelves.
-3. **Register Customer:** Input a new shopper's details to dynamically add them to the linked list database.
-4. **Initiate Shopping Session:** Select a registered customer and begin adding items from the inventory to their cart.
-5. **Checkout:** Calculate the total cost of a customer's cart, process the "payment," and finalize their session.
-6. **Exit:** Safely terminate the program. This triggers the data saving process and safely frees all allocated memory.
+0. **View Supermarket Status:** Check current inventory levels and view all registered customers.
+1. **Add Product:** Enter details for new items or restock existing ones.
+2. **Add Customer:** Register a new shopper with validated name and 9-digit ID.
+3. **Customer Shopping:** Select a customer and add products to their cart by barcode.
+4. **Print Shopping Cart:** View a customer's current cart with item breakdown and total.
+5. **Cart Management:** Pay for or cancel a customer's shopping cart.
+6. **Product Filter & Sort:** Access the filter/sort sub-menu (by type, name, price, expiry, or sort options).
+7. **Data Extraction & Analytics:** View purchase history, top customers, top products, and revenue reports.
+8. **Save Data:** Manually save all current data to files.
+-1. **Exit:** Safely terminate the program. This triggers data saving and safely frees all allocated memory.
 
 ## 📂 Project Structure
 
 A brief overview of how the codebase is organized:
 
-* `main.c` - The entry point and main menu loop of the application.
-* `include/` - Contains the header files (`.h`) declaring structures, v-tables, and function prototypes.
-* `src/` - Contains the implementation files (`.c`) for core modules (e.g., inventory management, customer linked lists, cart operations).
-* `data/` - Directory where text or binary files are stored for persistent system data.
-
-## 🔮 Future Improvements
-
-While this project marks a significant milestone in my C learning journey, there is always room for expansion. Potential future updates include:
-
-* **Binary File I/O:** Transitioning from plain text files to binary files for faster and more secure data storage.
-* **Advanced Algorithms:** Implementing Merge Sort or Quick Sort to organize inventory by price or name, and Binary Search for faster customer lookups.
-* **Robust Input Validation:** Hardening the `scanf` and string-parsing logic to completely prevent user-induced crashes or buffer overflows.
+| File | Description |
+|------|-------------|
+| `main.c` | Entry point and main menu loop |
+| `supermarket.h/c` | Core supermarket operations, filtering, and sorting |
+| `customer.h/c` | Customer management (registration, search, comparison) |
+| `product.h/c` | Product definitions, barcode generation, type management |
+| `shopping_cart.h/c` | Shopping cart linked list operations |
+| `shoppingitem.h/c` | Shopping item node definition and initialization |
+| `vtable.h/c` | Virtual Method Tables for product type polymorphism |
+| `fileio.h/c` | File I/O for data persistence (save/load) |
+| `analytics.h/c` | Data extraction and purchase analytics |
+| `date.h/c` | Date structure with validation and formatting |
+| `utils.h/c` | Generic utility functions (search, print, input) |
+| `data/` | Directory for persistent data files (auto-created) |
 
 ## 📄 License
 

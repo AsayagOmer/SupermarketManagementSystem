@@ -35,5 +35,16 @@ void printProductsByType(const SuperMarket* superMarket);
 void finalizeSuperMarket(SuperMarket* superMarket);
 void freeSuperMarket(SuperMarket* superMarket);
 
+// Enhanced product filtering
+void filterProductsByName(const SuperMarket* superMarket);
+void filterProductsByPriceRange(const SuperMarket* superMarket);
+void filterProductsByExpiry(const SuperMarket* superMarket);
+void sortProductsByPrice(const SuperMarket* superMarket);
+void sortProductsByName(const SuperMarket* superMarket);
+void productFilterMenu(const SuperMarket* superMarket);
+
+// Data persistence
+void saveAllData(const SuperMarket* superMarket);
+
 
 #endif //SUPERMARKET_H

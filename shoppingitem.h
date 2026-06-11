@@ -3,10 +3,11 @@
 #define SHOPPINGITEM_H
 #include "product.h"
 
-typedef struct {
-    char barcode[7]; // TODO NOTE TO SELF: consider making barcode a struct
+typedef struct ShoppingItem {
+    char barcode[BARCODE_LEN];
     float price;
     int amount;
+    struct ShoppingItem* next;  // Linked list pointer
 } ShoppingItem;
 
 int shoppingItemEquals(const void* i1, const void* i2);
