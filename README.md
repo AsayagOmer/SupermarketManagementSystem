@@ -115,6 +115,15 @@ A brief overview of how the codebase is organized:
 | `utils.h/c` | Generic utility functions (search, print, input) |
 | `data/` | Directory for persistent data files (auto-created) |
 
+## 🔮 Future Improvements & AI Suggestions
+
+While the current system covers all core features of supermarket operations, there are several exciting pathways for future development, particularly incorporating Machine Learning:
+
+* **Predictive Shopping Recommendations:** Implement a machine learning recommendation system (e.g., collaborative filtering or market basket analysis using the Apriori algorithm) that analyzes customer purchase history to suggest items in real-time when starting a shopping session.
+* **Smart Restocking & Demand Forecasting:** Integrate time-series forecasting (like ARIMA or LSTM models) to analyze past sales trends and predict future inventory demands, automatically alerting managers about upcoming shortages.
+* **Dynamic Pricing Engine:** Implement dynamic pricing optimization models to automatically adjust item discounts based on expiration proximity, customer purchasing patterns, and current stock volumes to minimize food waste and optimize profit margins.
+
 ## 📄 License
+
 
 Distributed under the Unlicensed license. See `Unlicense license` for more information.
